@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -27,17 +28,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.NotFoundException
+import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.common.HybridBinarizer
+import java.util.concurrent.Executors
 
 /**
- * Continuous live QR scan: CameraX preview + ML Kit on-device barcode analysis. Detected raw
- * text is reported via [onQrDetected] for every analyzed frame that contains a QR code -- the
- * caller (`ReadViewModel.onQrDetected`) is responsible for de-duping repeats of the same code.
+ * Continuous live QR scan: CameraX preview + ZXing on-device barcode analysis (fully
+ * on-device/offline, no proprietary dependencies -- unlike ML Kit, this keeps the app
+ * free-software/F-Droid-eligible). Detected raw text is reported via [onQrDetected] for every
+ * analyzed frame that contains a QR code -- the caller (`ReadViewModel.onQrDetected`) is
+ * responsible for de-duping repeats of the same code.
  */
 @Composable
 fun CameraQrScanner(onQrDetected: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -65,9 +72,14 @@ fun CameraQrScanner(onQrDetected: (String) -> Unit, modifier: Modifier = Modifie
         return
     }
 
-    val scanner = remember {
-        BarcodeScanning.getClient(BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build())
+    val reader = remember {
+        MultiFormatReader().apply {
+            setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE)))
+        }
     }
+    // Frame decoding is synchronous/CPU-bound -- runs on its own executor so it never blocks the
+    // main thread (unlike ML Kit's async Task API, ZXing's MultiFormatReader.decode is blocking).
+    val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
     // Tracks the actually-bound provider so it can be released when this composable leaves
     // composition (e.g. the "Pausieren" toggle) -- otherwise the camera keeps running in the
     // background since binding only happens once, asynchronously, inside AndroidView's factory.
@@ -76,7 +88,7 @@ fun CameraQrScanner(onQrDetected: (String) -> Unit, modifier: Modifier = Modifie
     DisposableEffect(Unit) {
         onDispose {
             boundCameraProvider.value?.unbindAll()
-            scanner.close()
+            analyzerExecutor.shutdown()
         }
     }
 
@@ -94,16 +106,23 @@ fun CameraQrScanner(onQrDetected: (String) -> Unit, modifier: Modifier = Modifie
                     val analysis = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
-                    analysis.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null) {
-                            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                            scanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    barcodes.firstOrNull()?.rawValue?.let { onQrDetectedState.value(it) }
-                                }
-                                .addOnCompleteListener { imageProxy.close() }
-                        } else {
+                    analysis.setAnalyzer(analyzerExecutor) { imageProxy ->
+                        try {
+                            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                            val packed = extractYPlane(imageProxy)
+                            val rotated = rotateYPlane(packed, imageProxy.width, imageProxy.height, rotationDegrees)
+
+                            val source = PlanarYUVLuminanceSource(
+                                rotated.data, rotated.width, rotated.height,
+                                0, 0, rotated.width, rotated.height, false,
+                            )
+                            val result = reader.decodeWithState(BinaryBitmap(HybridBinarizer(source)))
+                            onQrDetectedState.value(result.text)
+                        } catch (e: NotFoundException) {
+                            // No QR code in this frame -- expected most of the time, ignore.
+                        } catch (e: Exception) {
+                            // Transient decode error -- ignore, next frame will retry.
+                        } finally {
                             imageProxy.close()
                         }
                     }
@@ -125,4 +144,72 @@ fun CameraQrScanner(onQrDetected: (String) -> Unit, modifier: Modifier = Modifie
             previewView
         },
     )
+}
+
+/**
+ * Copies the Y (luminance) plane out of a camera frame into a tightly-packed `width*height`
+ * array, respecting row/pixel stride (the plane's buffer may have padding beyond each row).
+ */
+private fun extractYPlane(imageProxy: ImageProxy): ByteArray {
+    val plane = imageProxy.planes[0]
+    val rowStride = plane.rowStride
+    val pixelStride = plane.pixelStride
+    val buffer = plane.buffer
+    val width = imageProxy.width
+    val height = imageProxy.height
+
+    if (rowStride == width && pixelStride == 1) {
+        val packed = ByteArray(width * height)
+        buffer.get(packed)
+        return packed
+    }
+
+    val packed = ByteArray(width * height)
+    val rowBytes = ByteArray(rowStride)
+    var outputOffset = 0
+    for (row in 0 until height) {
+        buffer.position(row * rowStride)
+        buffer.get(rowBytes, 0, minOf(rowStride, buffer.remaining()))
+        for (col in 0 until width) {
+            packed[outputOffset++] = rowBytes[col * pixelStride]
+        }
+    }
+    return packed
+}
+
+private class RotatedYPlane(val data: ByteArray, val width: Int, val height: Int)
+
+/** Rotates a camera frame's Y (luminance) plane so ZXing sees it upright. */
+private fun rotateYPlane(data: ByteArray, width: Int, height: Int, rotationDegrees: Int): RotatedYPlane {
+    return when (rotationDegrees) {
+        90 -> {
+            val rotated = ByteArray(data.size)
+            var i = 0
+            for (x in 0 until width) {
+                for (y in height - 1 downTo 0) {
+                    rotated[i++] = data[y * width + x]
+                }
+            }
+            RotatedYPlane(rotated, height, width)
+        }
+        180 -> {
+            val rotated = ByteArray(data.size)
+            val n = width * height
+            for (i in 0 until n) {
+                rotated[n - 1 - i] = data[i]
+            }
+            RotatedYPlane(rotated, width, height)
+        }
+        270 -> {
+            val rotated = ByteArray(data.size)
+            var i = 0
+            for (x in width - 1 downTo 0) {
+                for (y in 0 until height) {
+                    rotated[i++] = data[y * width + x]
+                }
+            }
+            RotatedYPlane(rotated, height, width)
+        }
+        else -> RotatedYPlane(data, width, height)
+    }
 }
