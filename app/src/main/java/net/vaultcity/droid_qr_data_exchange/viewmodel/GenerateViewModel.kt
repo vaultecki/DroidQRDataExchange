@@ -1,3 +1,6 @@
+// Copyright 2026 ecki
+// SPDX-License-Identifier: Apache-2.0
+
 package net.vaultcity.droid_qr_data_exchange.viewmodel
 
 import android.content.Context
