@@ -1,0 +1,29 @@
+Dateien sicher übertragen, ganz ohne WLAN, Bluetooth oder Kabel – nur mit der Kamera.
+
+Droid QR Data Exchange verpackt Dateien und ganze Ordner in ein verschlüsseltes Paket und wandelt es in einen oder mehrere QR-Codes um. Ein zweites Gerät scannt die Codes und stellt die Originaldateien wieder her. Kein Netzwerk, kein Cloud-Dienst, keine Datenspur – die Übertragung findet ausschließlich über das gescannte Bild statt.
+
+WARUM QR-CODES?
+Manchmal ist eine Netzwerkverbindung nicht möglich, nicht erwünscht oder schlicht nicht vertrauenswürdig – etwa in abgeschotteten Umgebungen, bei Air-Gapped-Systemen oder wenn man Metadaten und Funkspuren vermeiden möchte. Ein QR-Code auf einem Bildschirm (oder ausgedruckt) reicht als Übertragungsweg.
+
+SICHERHEIT ZUERST
+• Verschlüsselung mit NaCl SecretBox (XSalsa20-Poly1305)
+• Schlüsselableitung per Argon2i aus deinem Passwort – kein Passwort, keine Daten
+• Jeder einzelne QR-Code hat sein eigenes Salt und seine eigene Verschlüsselung
+• Teilenummer und Gesamtanzahl stecken verschlüsselt im QR-Code selbst – von außen ist nicht erkennbar, wie viele Teile eine Übertragung hat
+• Es gibt keine Passwort-Wiederherstellung – das ist Absicht
+
+GROSSE DATEIEN? KEIN PROBLEM
+Reicht der Inhalt nicht in einen einzigen QR-Code, wird er automatisch auf mehrere Codes aufgeteilt. Die Teile können in beliebiger Reihenfolge gescannt werden – die App merkt sich, was schon geladen ist, und zeigt an, wie viele Teile noch fehlen.
+
+DREI WEGE ZUM EINLESEN
+• Live per Kamera scannen
+• Ein gespeichertes QR-Bild oder eine Text-Datei auswählen
+• Den QR-Text direkt einfügen
+
+FÜR WEN IST DAS?
+Für alle, die Dateien zwischen zwei Geräten austauschen wollen, ohne dass beide im selben Netzwerk hängen, ohne Cloud-Zwischenstopp und mit voller Kontrolle über den Übertragungsweg. Ideal für sensible Dokumente, Zugangsdaten, Konfigurationsdateien oder einfach als Backup-Kanal, wenn sonst nichts anderes funktioniert.
+
+OPEN SOURCE
+Der komplette Quellcode ist offen einsehbar. Die App ist ein nativer Android-Port von py-qr-data-exchange und wire-format-kompatibel dazu – dieselbe Verschlüsselung, dasselbe Format.
+
+Hinweis: Es gibt keine Möglichkeit, ein vergessenes Passwort wiederherzustellen. Bewahre dein Passwort getrennt von den QR-Codes auf.
