@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenschutzerklärung – Droid QR Data Exchange</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+    line-height: 1.6;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+  .updated { color: #767676; font-size: 0.9rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.15rem; margin-top: 2rem; }
+  ul { padding-left: 1.25rem; }
+  code { background: rgba(127,127,127,0.15); padding: 0.1em 0.35em; border-radius: 4px; }
+  a { color: #4a7dff; }
+</style>
+</head>
+<body>
+
+<h1>Datenschutzerklärung</h1>
+<p class="updated">Droid QR Data Exchange &middot; Stand: 19. Juli 2026</p>
+
+<p>
+Droid QR Data Exchange ist eine Open-Source-App, die Dateien verschlüsselt in QR-Codes verpackt
+und wieder daraus zurückgewinnt. Die App funktioniert vollständig offline und ohne Server &mdash;
+diese Erklärung ist entsprechend kurz.
+</p>
+
+<h2>Keine Datenerhebung</h2>
+<p>Diese App:</p>
+<ul>
+  <li>sammelt, speichert oder überträgt <strong>keine personenbezogenen Daten</strong></li>
+  <li>enthält <strong>keine Analyse-, Tracking- oder Werbe-Bibliotheken</strong></li>
+  <li>benötigt <strong>keine Internetverbindung</strong> und stellt selbst keine her</li>
+  <li>erfordert <strong>kein Nutzerkonto</strong> und keine Registrierung</li>
+</ul>
+
+<h2>Berechtigungen</h2>
+<ul>
+  <li>
+    <strong>Kamera</strong>: wird ausschließlich verwendet, um QR-Codes live zu scannen. Das
+    Kamerabild wird ausschließlich auf dem Gerät verarbeitet (zur QR-Code-Erkennung) und
+    verlässt das Gerät nie.
+  </li>
+  <li>
+    <strong>Dateizugriff</strong> (Speicherzugriffs-Framework/SAF): Wenn du Dateien oder Ordner
+    zum Verschlüsseln auswählst, oder einen Zielordner zum Entschlüsseln, greift die App nur auf
+    die von dir explizit ausgewählten Dateien/Ordner zu. Es findet kein Zugriff auf andere
+    Dateien statt, und nichts wird an Dritte übermittelt.
+  </li>
+</ul>
+
+<h2>Passwort</h2>
+<p>
+Das zur Verschlüsselung verwendete Passwort wird ausschließlich lokal auf dem Gerät verarbeitet
+(zur Schlüsselableitung per Argon2i), niemals gespeichert und niemals übertragen. Es gibt keine
+Möglichkeit, ein vergessenes Passwort wiederherzustellen &mdash; das ist bewusst so gestaltet.
+</p>
+
+<h2>Open Source</h2>
+<p>
+Der vollständige Quellcode ist einsehbar unter
+<a href="https://github.com/vaultecki/DroidQRDataExchange">github.com/vaultecki/DroidQRDataExchange</a>,
+inklusive der Liste aller verwendeten Bibliotheken.
+</p>
+
+<h2>Änderungen dieser Erklärung</h2>
+<p>
+Sollte sich an der Datenverarbeitung etwas ändern, wird diese Seite entsprechend aktualisiert.
+</p>
+
+<h2>Kontakt</h2>
+<p>
+Bei Fragen zu dieser Datenschutzerklärung: <a href="mailto:sebastian.ecki.eckstein@gmail.com">sebastian.ecki.eckstein@gmail.com</a>
+</p>
+
+</body>
+</html>
